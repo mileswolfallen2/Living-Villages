@@ -1,0 +1,32 @@
+{
+    "schemaVersion": 1,
+    "id": "livingvillages",
+    "version": "${version}",
+    "name": "Living Villages",
+    "description": "Villages that evolve over time - building houses, roads, farms, and patrolling at night.",
+    "authors": ["livingvillages"],
+    "contact": {
+        "homepage": "https://github.com/milesallen/living-villages",
+        "sources": "https://github.com/milesallen/living-villages"
+    },
+    "license": "MIT",
+    "icon": "assets/livingvillages/icon.png",
+    "environment": "*",
+    "entrypoints": {
+        "main": [
+            "com.livingvillages.LivingVillages"
+        ],
+        "client": [
+            "com.livingvillages.client.LivingVillagesClient"
+        ]
+    },
+    "mixins": [
+        "livingvillages.mixins.json"
+    ],
+    "depends": {
+        "fabricloader": ">=0.19.3",
+        "minecraft": "~26.2",
+        "java": ">=25",
+        "fabric-api": "*"
+    }
+}
