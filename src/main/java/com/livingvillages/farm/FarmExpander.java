@@ -16,13 +16,21 @@ public class FarmExpander {
     private static final Random RANDOM = new Random();
 
     public boolean tryExpandFarm(VillageData village, ServerLevel level) {
+        BlockPos farmCenter = findFarmSite(village, level);
+        if (farmCenter == null) return false;
+        return createFarmPlot(farmCenter, level);
+    }
+
+    public BlockPos findFarmSite(VillageData village, ServerLevel level) {
         BlockPos farmCenter = findExistingFarmland(village, level);
         if (farmCenter == null) {
             farmCenter = findSuitableFarmLocation(village, level);
         }
-        if (farmCenter == null) return false;
+        return farmCenter;
+    }
 
-        return createFarmPlot(farmCenter, level);
+    public void placeFarmAt(BlockPos center, ServerLevel level) {
+        createFarmPlot(center, level);
     }
 
     private BlockPos findExistingFarmland(VillageData village, ServerLevel level) {

@@ -56,6 +56,36 @@ public class RoadPlacer {
         return placed;
     }
 
+    public record RoadSegment(BlockPos from, BlockPos to, BlockState material) {}
+
+    public List<RoadSegment> findRoadTargets(VillageData village, ServerLevel level) {
+        List<RoadSegment> targets = new ArrayList<>();
+        List<BlockPos> buildings = village.buildingPositions;
+        if (buildings.size() < 2) return targets;
+
+        BlockPos center = village.center;
+        BlockState roadMat = getRoadMaterial(level);
+
+        int mainRoads = Math.min(2, buildings.size() / 3);
+        for (int i = 0; i < mainRoads && i < buildings.size(); i++) {
+            BlockPos building = buildings.get(i);
+            if (RANDOM.nextInt(3) != 0) continue;
+            targets.add(new RoadSegment(center, building, roadMat));
+        }
+
+        for (int i = 1; i < buildings.size(); i++) {
+            if (RANDOM.nextInt(4) == 0) {
+                targets.add(new RoadSegment(buildings.get(i - 1), buildings.get(i), getPathMaterial(level)));
+            }
+        }
+
+        return targets;
+    }
+
+    public void placeRoadSegment(RoadSegment segment, ServerLevel level) {
+        layRoad(segment.from(), segment.to(), level, segment.material());
+    }
+
     private boolean layRoad(BlockPos from, BlockPos to, ServerLevel level, BlockState material) {
         int x1 = from.getX(), z1 = from.getZ();
         int x2 = to.getX(), z2 = to.getZ();

@@ -23,16 +23,14 @@ public class BuildingPlacer {
         for (int attempt = 0; attempt < 10; attempt++) {
             BlockPos site = findBuildSite(village, level);
             if (site != null) {
-                BuildingBlueprint blueprint = BuildingPool.selectBuilding(level, site);
-                placeStructure(site, blueprint, level);
-                village.buildingPositions.add(site);
+                placeAt(site, village, level);
                 return true;
             }
         }
         return false;
     }
 
-    private BlockPos findBuildSite(VillageData village, ServerLevel level) {
+    public BlockPos findBuildSite(VillageData village, ServerLevel level) {
         int radius = village.radius;
         int attempts = 20;
 
@@ -93,8 +91,24 @@ public class BuildingPlacer {
         return true;
     }
 
-    private void placeStructure(BlockPos origin, BuildingBlueprint blueprint, ServerLevel level) {
+    public void placeAt(BlockPos site, VillageData village, ServerLevel level) {
+        BuildingBlueprint blueprint = BuildingPool.selectBuilding(level, site);
         Direction facing = Direction.from2DDataValue(RANDOM.nextInt(4));
+        placeStructure(site, blueprint, level, facing);
+        village.buildingPositions.add(site);
+    }
+
+    public void placeAt(BlockPos site, VillageData village, ServerLevel level, Direction facing) {
+        BuildingBlueprint blueprint = BuildingPool.selectBuilding(level, site);
+        placeStructure(site, blueprint, level, facing);
+        village.buildingPositions.add(site);
+    }
+
+    private void placeStructure(BlockPos origin, BuildingBlueprint blueprint, ServerLevel level) {
+        placeStructure(origin, blueprint, level, Direction.from2DDataValue(RANDOM.nextInt(4)));
+    }
+
+    private void placeStructure(BlockPos origin, BuildingBlueprint blueprint, ServerLevel level, Direction facing) {
 
         for (BlockLayer layer : blueprint.layers()) {
             int yOffset = layer.y();

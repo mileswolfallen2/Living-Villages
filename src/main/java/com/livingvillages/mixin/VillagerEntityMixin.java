@@ -1,5 +1,7 @@
 package com.livingvillages.mixin;
 
+import com.livingvillages.LivingVillages;
+import com.livingvillages.construction.ConstructionManager;
 import com.livingvillages.registry.VillageData;
 import com.livingvillages.registry.VillageRegistry;
 import net.minecraft.core.BlockPos;
@@ -24,6 +26,11 @@ public class VillagerEntityMixin {
         Level level = villager.level();
 
         if (level.isClientSide()) return;
+
+        ConstructionManager cm = LivingVillages.getInstance().getConstructionManager();
+        if (cm != null) {
+            cm.tickVillagerWork(villager);
+        }
 
         if (level.getGameTime() % 200 == 0) {
             BlockPos pos = villager.blockPosition();

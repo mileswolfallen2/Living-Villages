@@ -1,26 +1,40 @@
 package com.livingvillages.evolution;
 
 import com.livingvillages.building.BuildingPlacer;
+import com.livingvillages.building.StructurePlacer;
+import com.livingvillages.building.StructurePlacer.BuildPlan;
 import com.livingvillages.config.ModConfig;
+import com.livingvillages.construction.ConstructionManager;
+import com.livingvillages.construction.ConstructionProject;
 import com.livingvillages.farm.FarmExpander;
 import com.livingvillages.registry.VillageData;
 import com.livingvillages.registry.VillageRegistry;
 import com.livingvillages.road.RoadPlacer;
+import com.livingvillages.road.RoadPlacer.RoadSegment;
 import com.livingvillages.visuals.VillageVisuals;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 
+import java.util.List;
+import java.util.Random;
+
 public class EvolutionScheduler {
+    private static final Random RANDOM = new Random();
     private final MinecraftServer server;
     private final BuildingPlacer buildingPlacer;
+    private final StructurePlacer structurePlacer;
     private final RoadPlacer roadPlacer;
     private final FarmExpander farmExpander;
     private final VillageVisuals villageVisuals;
+    private final ConstructionManager constructionManager;
     private int tickCounter = 0;
 
-    public EvolutionScheduler(MinecraftServer server) {
+    public EvolutionScheduler(MinecraftServer server, ConstructionManager constructionManager) {
         this.server = server;
+        this.constructionManager = constructionManager;
         this.buildingPlacer = new BuildingPlacer();
+        this.structurePlacer = new StructurePlacer();
         this.roadPlacer = new RoadPlacer();
         this.farmExpander = new FarmExpander();
         this.villageVisuals = new VillageVisuals();
@@ -51,26 +65,60 @@ public class EvolutionScheduler {
 
     private void processVillage(VillageData village, ServerLevel level, ModConfig config) {
         long gameTime = level.getGameTime();
-        boolean built = false;
 
         if (village.buildCount < config.max_buildings_per_village &&
             gameTime - village.lastBuildTime > config.build_cooldown_ticks) {
-            if (buildingPlacer.tryPlaceBuilding(village, level)) {
-                village.lastBuildTime = gameTime;
-                village.buildCount++;
-                built = true;
+
+            StructurePlacer.BuildPlan plan = structurePlacer.findBuildSite(village, level);
+            if (plan != null) {
+                BlockPos capturedSite = plan.site().immutable();
+                int workTicks = plan.selection().workTicks();
+                ConstructionProject project = new ConstructionProject(
+                    ConstructionProject.Type.BUILDING,
+                    capturedSite,
+                    village,
+                    workTicks,
+                    () -> {
+                        boolean placed = structurePlacer.placeStructure(plan, village, level);
+                        if (placed) {
+                            village.buildingPositions.add(capturedSite);
+                            village.lastBuildTime = level.getGameTime();
+                            village.buildCount++;
+                        }
+                    }
+                );
+                constructionManager.addProject(project);
             }
         }
 
         if (gameTime - village.lastBuildTime > config.road_interval) {
-            if (roadPlacer.tryPlaceRoad(village, level)) {
-                built = true;
+            List<RoadSegment> roads = roadPlacer.findRoadTargets(village, level);
+            for (RoadSegment road : roads) {
+                BlockPos from = road.from().immutable();
+                BlockPos to = road.to().immutable();
+                ConstructionProject project = new ConstructionProject(
+                    ConstructionProject.Type.ROAD,
+                    to,
+                    village,
+                    40,
+                    () -> roadPlacer.placeRoadSegment(new RoadSegment(from, to, road.material()), level)
+                );
+                constructionManager.addProject(project);
             }
         }
 
         if (gameTime - village.lastBuildTime > config.farm_expand_interval) {
-            if (farmExpander.tryExpandFarm(village, level)) {
-                built = true;
+            BlockPos farmSite = farmExpander.findFarmSite(village, level);
+            if (farmSite != null) {
+                BlockPos capturedSite = farmSite.immutable();
+                ConstructionProject project = new ConstructionProject(
+                    ConstructionProject.Type.FARM,
+                    capturedSite,
+                    village,
+                    60,
+                    () -> farmExpander.placeFarmAt(capturedSite, level)
+                );
+                constructionManager.addProject(project);
             }
         }
 
